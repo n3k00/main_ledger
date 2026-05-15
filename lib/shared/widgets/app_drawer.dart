@@ -2,11 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/auth_strings.dart';
+import '../../core/localization/app_language.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/drivers/presentation/pages/drivers_page.dart';
 import '../../features/parcels/presentation/pages/parcels_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 
-enum AppDrawerDestination { ledger, drivers, parcels, commissions, about }
+enum AppDrawerDestination {
+  ledger,
+  drivers,
+  parcels,
+  commissions,
+  settings,
+  about,
+}
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key, required this.selectedDestination});
@@ -16,6 +25,7 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(authStateChangesProvider).value;
+    final strings = ref.watch(appStringsProvider);
 
     return Drawer(
       child: SafeArea(
@@ -35,7 +45,7 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Main Ledger',
+                    strings.appName,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -55,7 +65,7 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               selected: selectedDestination == AppDrawerDestination.ledger,
               leading: const Icon(Icons.receipt_long_outlined),
-              title: const Text('Ledger'),
+              title: Text(strings.ledger),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).popUntil((route) => route.isFirst);
@@ -64,7 +74,7 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               selected: selectedDestination == AppDrawerDestination.drivers,
               leading: const Icon(Icons.people_outline),
-              title: const Text('Drivers'),
+              title: Text(strings.drivers),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -78,7 +88,7 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               selected: selectedDestination == AppDrawerDestination.parcels,
               leading: const Icon(Icons.local_shipping_outlined),
-              title: const Text('Parcels'),
+              title: Text(strings.parcels),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -92,14 +102,28 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               selected: selectedDestination == AppDrawerDestination.commissions,
               leading: const Icon(Icons.payments_outlined),
-              title: const Text('Commissions'),
+              title: Text(strings.commissions),
               onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              selected: selectedDestination == AppDrawerDestination.settings,
+              leading: const Icon(Icons.settings_outlined),
+              title: Text(strings.settings),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
+              },
             ),
             const Spacer(),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.logout),
-              title: const Text(AuthStrings.logoutAction),
+              title: Text(strings.logout),
               onTap: () async {
                 Navigator.pop(context);
                 await ref.read(authServiceProvider).signOut();
@@ -113,7 +137,7 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               selected: selectedDestination == AppDrawerDestination.about,
               leading: const Icon(Icons.info_outline),
-              title: const Text('About'),
+              title: Text(strings.about),
               onTap: () => Navigator.pop(context),
             ),
           ],

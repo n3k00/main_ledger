@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../drivers/presentation/providers/driver_providers.dart';
@@ -14,6 +15,7 @@ class ParcelDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final ledger = parcel.ledgerId == null
         ? null
         : ref
@@ -31,7 +33,7 @@ class ParcelDetailPage extends ConsumerWidget {
         : driver?.name ?? 'Unknown driver';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Parcel Detail'), centerTitle: false),
+      appBar: AppBar(title: Text(strings.parcelDetail), centerTitle: false),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -39,50 +41,62 @@ class ParcelDetailPage extends ConsumerWidget {
             _Section(
               title: parcel.trackingId,
               rows: [
-                _InfoRow(label: 'Status', value: parcel.status),
-                _InfoRow(label: 'Driver', value: driverText),
+                _InfoRow(
+                  label: strings.status,
+                  value: strings.statusValue(parcel.status),
+                ),
+                _InfoRow(label: strings.driver, value: driverText),
                 if (ledger != null)
                   _InfoRow(
-                    label: 'Dispatch',
+                    label: strings.dispatch,
                     value: formatDate(ledger.dispatchDate),
                   ),
-                _InfoRow(label: 'Created', value: formatDate(parcel.createdAt)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _Section(
-              title: 'Route',
-              rows: [
-                _InfoRow(label: 'From', value: parcel.fromTown),
-                _InfoRow(label: 'To', value: parcel.toTown),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _Section(
-              title: 'People',
-              rows: [
-                _InfoRow(label: 'Sender', value: parcel.senderName),
-                _InfoRow(label: 'Sender Phone', value: parcel.senderPhone),
-                _InfoRow(label: 'Receiver', value: parcel.receiverName),
-                _InfoRow(label: 'Receiver Phone', value: parcel.receiverPhone),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _Section(
-              title: 'Charges',
-              rows: [
-                _InfoRow(label: 'Payment', value: parcel.paymentStatus),
-                _InfoRow(label: 'Parcel Type', value: parcel.parcelType),
                 _InfoRow(
-                  label: 'Qty',
+                  label: strings.created,
+                  value: formatDate(parcel.createdAt),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: strings.route,
+              rows: [
+                _InfoRow(label: strings.from, value: parcel.fromTown),
+                _InfoRow(label: strings.to, value: parcel.toTown),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: strings.people,
+              rows: [
+                _InfoRow(label: strings.sender, value: parcel.senderName),
+                _InfoRow(label: strings.senderPhone, value: parcel.senderPhone),
+                _InfoRow(label: strings.receiver, value: parcel.receiverName),
+                _InfoRow(
+                  label: strings.receiverPhone,
+                  value: parcel.receiverPhone,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: strings.charges,
+              rows: [
+                _InfoRow(
+                  label: strings.payment,
+                  value: strings.paymentValue(parcel.paymentStatus),
+                ),
+                _InfoRow(label: strings.parcelType, value: parcel.parcelType),
+                _InfoRow(
+                  label: strings.qty,
                   value: parcel.numberOfParcels.toString(),
                 ),
                 _InfoRow(
-                  label: 'Charges',
+                  label: strings.charges,
                   value: '${formatMoney(parcel.totalCharges.round())} Ks',
                 ),
                 _InfoRow(
-                  label: 'Cash Advance',
+                  label: strings.cashAdvance,
                   value: '${formatMoney(parcel.cashAdvance.round())} Ks',
                 ),
               ],
@@ -90,8 +104,8 @@ class ParcelDetailPage extends ConsumerWidget {
             if (parcel.remark != null && parcel.remark!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               _Section(
-                title: 'Remark',
-                rows: [_InfoRow(label: 'Note', value: parcel.remark!)],
+                title: strings.remark,
+                rows: [_InfoRow(label: strings.note, value: parcel.remark!)],
               ),
             ],
           ],

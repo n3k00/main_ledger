@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -54,6 +55,7 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     final currentLedger = ref
         .watch(localLedgerMainsProvider)
         .firstWhere(
@@ -92,7 +94,7 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
       onKeyEvent: (event) => _handlePageScanKey(event, currentLedger),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Ledger Detail'),
+          title: Text(strings.ledgerDetail),
           centerTitle: false,
           actions: [
             TextButton.icon(
@@ -109,14 +111,14 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
                 payReceiveAmount: driverBalance,
               ),
               icon: const Icon(Icons.print_outlined),
-              label: const Text('Print'),
+              label: Text(strings.print),
             ),
             TextButton.icon(
               onPressed: currentLedger.status == LedgerStatus.settled
                   ? null
                   : () => _openScanDialog(currentLedger.id),
               icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan Parcel'),
+              label: Text(strings.scanParcel),
             ),
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -141,8 +143,8 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
                 ),
                 label: Text(
                   currentLedger.status == LedgerStatus.settled
-                      ? 'Edit Settlement'
-                      : 'Settle',
+                      ? strings.editSettlement
+                      : strings.settle,
                 ),
               ),
             ),
@@ -173,6 +175,7 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
                     totalCashAdvance: totalCashAdvance,
                     netAmount: netAmount,
                     driverBalance: driverBalance,
+                    strings: strings,
                   ),
                 ),
               ],
@@ -276,7 +279,7 @@ class _LedgerDetailPageState extends ConsumerState<LedgerDetailPage> {
   }
 }
 
-class _LedgerMetaBar extends StatelessWidget {
+class _LedgerMetaBar extends ConsumerWidget {
   const _LedgerMetaBar({
     required this.ledger,
     required this.driver,
@@ -290,7 +293,8 @@ class _LedgerMetaBar extends StatelessWidget {
   final double netAmount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
@@ -305,14 +309,23 @@ class _LedgerMetaBar extends StatelessWidget {
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          _MetaText(label: 'Driver', value: driver.name),
-          _MetaText(label: 'Dispatch', value: formatDate(ledger.dispatchDate)),
-          _MetaText(label: 'Status', value: ledger.status.value),
-          _MetaText(label: 'Parcels', value: parcelCount.toString()),
-          _MetaText(label: 'Net', value: '${_formatAmount(netAmount)} Ks'),
+          _MetaText(label: strings.driver, value: driver.name),
+          _MetaText(
+            label: strings.dispatch,
+            value: formatDate(ledger.dispatchDate),
+          ),
+          _MetaText(
+            label: strings.status,
+            value: strings.statusValue(ledger.status.value),
+          ),
+          _MetaText(label: strings.parcels, value: parcelCount.toString()),
+          _MetaText(
+            label: strings.netAmount,
+            value: '${_formatAmount(netAmount)} Ks',
+          ),
           if (ledger.status == LedgerStatus.settled)
             Text(
-              'Settlement completed.',
+              strings.settlementCompleted,
               style: textTheme.bodySmall?.copyWith(color: Colors.black54),
             ),
         ],
@@ -410,12 +423,13 @@ class _ScanParcelDialogState extends State<_ScanParcelDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = widget.ref.read(appStringsProvider);
     return KeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: AlertDialog(
-        title: const Text('Scan Parcel'),
+        title: Text(strings.scanParcel),
         content: SizedBox(
           width: 420,
           child: Column(
@@ -443,7 +457,7 @@ class _ScanParcelDialogState extends State<_ScanParcelDialog> {
               ],
               if (_lastScan != null) ...[
                 const SizedBox(height: 12),
-                _InfoLine(label: 'Tracking ID', value: _lastScan!),
+                _InfoLine(label: strings.trackingId, value: _lastScan!),
               ],
               if (_notFound) ...[
                 const SizedBox(height: 12),
@@ -453,23 +467,35 @@ class _ScanParcelDialogState extends State<_ScanParcelDialog> {
                 ),
               ],
               if (_parcel != null) ...[
-                _InfoLine(label: 'Tracking ID', value: _parcel!.trackingId),
-                _InfoLine(label: 'Receiver', value: _parcel!.receiverName),
-                _InfoLine(label: 'To', value: _parcel!.toTown),
-                _InfoLine(label: 'Parcel Type', value: _parcel!.parcelType),
                 _InfoLine(
-                  label: 'Qty',
+                  label: strings.trackingId,
+                  value: _parcel!.trackingId,
+                ),
+                _InfoLine(
+                  label: strings.receiver,
+                  value: _parcel!.receiverName,
+                ),
+                _InfoLine(label: strings.to, value: _parcel!.toTown),
+                _InfoLine(
+                  label: strings.parcelType,
+                  value: _parcel!.parcelType,
+                ),
+                _InfoLine(
+                  label: strings.qty,
                   value: _parcel!.numberOfParcels.toString(),
                 ),
                 _InfoLine(
-                  label: 'Charges',
+                  label: strings.charges,
                   value: '${_formatAmount(_parcel!.totalCharges)} Ks',
                 ),
                 _InfoLine(
-                  label: 'Cash Advance',
+                  label: strings.cashAdvance,
                   value: '${_formatAmount(_parcel!.cashAdvance)} Ks',
                 ),
-                _InfoLine(label: 'Payment', value: _parcel!.paymentStatus),
+                _InfoLine(
+                  label: strings.payment,
+                  value: strings.paymentValue(_parcel!.paymentStatus),
+                ),
               ],
             ],
           ),
@@ -477,11 +503,11 @@ class _ScanParcelDialogState extends State<_ScanParcelDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(strings.cancel),
           ),
           FilledButton(
             onPressed: _parcel == null ? null : _attachParcel,
-            child: const Text('OK'),
+            child: Text(strings.ok),
           ),
         ],
       ),
@@ -622,6 +648,7 @@ class _ParcelDataTable extends StatefulWidget {
     required this.totalCashAdvance,
     required this.netAmount,
     required this.driverBalance,
+    required this.strings,
   });
 
   final String ledgerId;
@@ -634,6 +661,7 @@ class _ParcelDataTable extends StatefulWidget {
   final double totalCashAdvance;
   final double netAmount;
   final double driverBalance;
+  final AppStrings strings;
 
   @override
   State<_ParcelDataTable> createState() => _ParcelDataTableState();
@@ -733,26 +761,26 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
                                             DataColumn(
                                               label: _SizedHeader(
                                                 width: layout.receiver,
-                                                label: 'Receiver',
+                                                label: widget.strings.receiver,
                                               ),
                                             ),
                                             DataColumn(
                                               label: _SizedHeader(
                                                 width: layout.toTown,
-                                                label: 'To',
+                                                label: widget.strings.to,
                                               ),
                                             ),
                                             DataColumn(
                                               label: _SizedHeader(
                                                 width: layout.parcelType,
-                                                label: 'Type',
+                                                label: widget.strings.type,
                                               ),
                                             ),
                                             DataColumn(
                                               numeric: true,
                                               label: _SizedHeader(
                                                 width: layout.qty,
-                                                label: 'Qty',
+                                                label: widget.strings.qty,
                                                 alignEnd: true,
                                               ),
                                             ),
@@ -760,7 +788,7 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
                                               numeric: true,
                                               label: _SizedHeader(
                                                 width: layout.charges,
-                                                label: 'Charges',
+                                                label: widget.strings.charges,
                                                 alignEnd: true,
                                               ),
                                             ),
@@ -768,14 +796,16 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
                                               numeric: true,
                                               label: _SizedHeader(
                                                 width: layout.cashAdvance,
-                                                label: 'Advance',
+                                                label: widget
+                                                    .strings
+                                                    .advanceHeader,
                                                 alignEnd: true,
                                               ),
                                             ),
                                             DataColumn(
                                               label: _SizedHeader(
                                                 width: layout.payment,
-                                                label: 'Payment',
+                                                label: widget.strings.payment,
                                               ),
                                             ),
                                             DataColumn(
@@ -817,6 +847,7 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
                                                 widget.ledger.otherFee ?? 0,
                                             netAmount: widget.netAmount,
                                             driverBalance: widget.driverBalance,
+                                            strings: widget.strings,
                                           ),
                                       ],
                                     ),
@@ -843,7 +874,8 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
     _ParcelTableLayout layout,
   ) {
     return DataRow(
-      onSelectChanged: (_) => _showParcelDetailDialog(context, parcel),
+      onSelectChanged: (_) =>
+          _showParcelDetailDialog(context, parcel, widget.strings),
       cells: [
         DataCell(_SizedCell(width: layout.no, value: '${index + 1}')),
         DataCell(
@@ -878,7 +910,10 @@ class _ParcelDataTableState extends State<_ParcelDataTable> {
           ),
         ),
         DataCell(
-          _SizedCell(width: layout.payment, value: parcel.paymentStatus),
+          _SizedCell(
+            width: layout.payment,
+            value: widget.strings.paymentValue(parcel.paymentStatus),
+          ),
         ),
         DataCell(
           SizedBox(
@@ -907,6 +942,7 @@ class _SettlementSummaryBar extends StatelessWidget {
     required this.otherFee,
     required this.netAmount,
     required this.driverBalance,
+    required this.strings,
   });
 
   final double totalCharges;
@@ -919,6 +955,7 @@ class _SettlementSummaryBar extends StatelessWidget {
   final double otherFee;
   final double netAmount;
   final double driverBalance;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -926,44 +963,50 @@ class _SettlementSummaryBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _CalculationLine(
-          label: 'Paid Amount',
+          label: strings.paidAmount,
           value: '${_formatAmount(paidAmount)} Ks',
         ),
         _CalculationLine(
-          label: 'Unpaid Amount',
+          label: strings.unpaidAmount,
           value: '${_formatAmount(collectAmount)} Ks',
         ),
         _CalculationLine(
-          label: 'Total Charges',
+          label: strings.totalCharges,
           value: '${_formatAmount(totalCharges)} Ks',
           emphasized: true,
         ),
         _CalculationLine(
-          label: 'Commission Fee',
+          label: strings.commissionFee,
           value: _formatDeduction(commissionFee),
         ),
-        _CalculationLine(label: 'Labor Fee', value: _formatDeduction(laborFee)),
         _CalculationLine(
-          label: 'Delivery Fee',
+          label: strings.laborFee,
+          value: _formatDeduction(laborFee),
+        ),
+        _CalculationLine(
+          label: strings.deliveryFee,
           value: _formatDeduction(deliveryFee),
         ),
-        _CalculationLine(label: 'Other Fee', value: _formatDeduction(otherFee)),
         _CalculationLine(
-          label: 'Net Amount',
+          label: strings.otherFee,
+          value: _formatDeduction(otherFee),
+        ),
+        _CalculationLine(
+          label: strings.netAmount,
           value: '${_formatAmount(netAmount)} Ks',
           emphasized: true,
         ),
         _CalculationLine(
-          label: 'Unpaid Amount',
+          label: strings.unpaidAmount,
           value: _formatDeduction(collectAmount),
         ),
         _CalculationLine(
-          label: 'Pay / Receive Amount',
+          label: strings.payReceiveAmount,
           value: _formatSignedAmount(driverBalance),
           emphasized: true,
         ),
         _CalculationLine(
-          label: 'Cash Advance',
+          label: strings.cashAdvance,
           value: '${_formatAmount(totalCashAdvance)} Ks',
         ),
       ],
@@ -1154,29 +1197,30 @@ class _ParcelRowMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     return PopupMenuButton<String>(
       tooltip: 'Parcel options',
       icon: const Icon(Icons.more_vert),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'view',
           child: _ParcelMenuItem(
             icon: Icons.visibility_outlined,
-            label: 'View',
+            label: strings.view,
           ),
         ),
         if (!isSettled)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'remove',
             child: _ParcelMenuItem(
               icon: Icons.link_off_outlined,
-              label: 'Remove',
+              label: strings.remove,
             ),
           ),
       ],
       onSelected: (value) async {
         if (value == 'view') {
-          _showParcelDetailDialog(context, parcel);
+          _showParcelDetailDialog(context, parcel, strings);
           return;
         }
 
@@ -1222,7 +1266,11 @@ Future<void> _removeParcelFromLedger({
   }
 }
 
-Future<void> _showParcelDetailDialog(BuildContext context, Parcel parcel) {
+Future<void> _showParcelDetailDialog(
+  BuildContext context,
+  Parcel parcel,
+  AppStrings strings,
+) {
   return showDialog<void>(
     context: context,
     builder: (context) {
@@ -1235,29 +1283,41 @@ Future<void> _showParcelDetailDialog(BuildContext context, Parcel parcel) {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _InfoLine(label: 'Receiver', value: parcel.receiverName),
-                _InfoLine(label: 'Receiver Phone', value: parcel.receiverPhone),
-                _InfoLine(label: 'Sender', value: parcel.senderName),
-                _InfoLine(label: 'Sender Phone', value: parcel.senderPhone),
-                _InfoLine(label: 'From', value: parcel.fromTown),
-                _InfoLine(label: 'To', value: parcel.toTown),
-                _InfoLine(label: 'Parcel Type', value: parcel.parcelType),
+                _InfoLine(label: strings.receiver, value: parcel.receiverName),
                 _InfoLine(
-                  label: 'Qty',
+                  label: strings.receiverPhone,
+                  value: parcel.receiverPhone,
+                ),
+                _InfoLine(label: strings.sender, value: parcel.senderName),
+                _InfoLine(
+                  label: strings.senderPhone,
+                  value: parcel.senderPhone,
+                ),
+                _InfoLine(label: strings.from, value: parcel.fromTown),
+                _InfoLine(label: strings.to, value: parcel.toTown),
+                _InfoLine(label: strings.parcelType, value: parcel.parcelType),
+                _InfoLine(
+                  label: strings.qty,
                   value: parcel.numberOfParcels.toString(),
                 ),
                 _InfoLine(
-                  label: 'Charges',
+                  label: strings.charges,
                   value: '${_formatAmount(parcel.totalCharges)} Ks',
                 ),
                 _InfoLine(
-                  label: 'Cash Advance',
+                  label: strings.cashAdvance,
                   value: '${_formatAmount(parcel.cashAdvance)} Ks',
                 ),
-                _InfoLine(label: 'Payment', value: parcel.paymentStatus),
-                _InfoLine(label: 'Status', value: parcel.status),
+                _InfoLine(
+                  label: strings.payment,
+                  value: strings.paymentValue(parcel.paymentStatus),
+                ),
+                _InfoLine(
+                  label: strings.status,
+                  value: strings.statusValue(parcel.status),
+                ),
                 if (parcel.remark != null && parcel.remark!.trim().isNotEmpty)
-                  _InfoLine(label: 'Remark', value: parcel.remark!),
+                  _InfoLine(label: strings.remark, value: parcel.remark!),
               ],
             ),
           ),
@@ -1265,7 +1325,7 @@ Future<void> _showParcelDetailDialog(BuildContext context, Parcel parcel) {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(strings.close),
           ),
         ],
       );

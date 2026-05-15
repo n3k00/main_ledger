@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../../shared/utils/sync_error_message.dart';
@@ -32,19 +33,20 @@ class _ParcelsPageState extends ConsumerState<ParcelsPage> {
   @override
   Widget build(BuildContext context) {
     final parcels = ref.watch(parcelsListProvider);
+    final strings = ref.watch(appStringsProvider);
 
     return Scaffold(
       drawer: const AppDrawer(
         selectedDestination: AppDrawerDestination.parcels,
       ),
       appBar: AppBar(
-        title: const Text('Parcels'),
+        title: Text(strings.parcels),
         centerTitle: false,
         actions: [
           SyncActionButton(
             isSyncing: _isSyncing,
             onPressed: _syncParcels,
-            tooltip: 'Sync parcels',
+            tooltip: strings.syncParcelsTooltip,
           ),
         ],
       ),
@@ -56,7 +58,7 @@ class _ParcelsPageState extends ConsumerState<ParcelsPage> {
             children: [
               AppTextField(
                 controller: _searchController,
-                labelText: 'Search parcels',
+                labelText: strings.searchParcels,
                 hintText: 'Tracking ID, receiver, phone, sender, town',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isEmpty
@@ -67,7 +69,7 @@ class _ParcelsPageState extends ConsumerState<ParcelsPage> {
                           ref.read(parcelsListProvider.notifier).setQuery('');
                           setState(() {});
                         },
-                        tooltip: 'Clear search',
+                        tooltip: strings.clearSearch,
                         icon: const Icon(Icons.close),
                       ),
                 onChanged: (value) {
@@ -99,10 +101,11 @@ class _ParcelsPageState extends ConsumerState<ParcelsPage> {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     final messenger = ScaffoldMessenger.of(context);
+    final strings = ref.read(appStringsProvider);
     try {
       await ref.read(parcelsListProvider.notifier).syncTwoWay();
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Parcels synced.')));
+      messenger.showSnackBar(SnackBar(content: Text(strings.parcelsSynced)));
     } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(syncErrorMessage(error))));
@@ -170,19 +173,20 @@ class _ParcelTile extends StatelessWidget {
   }
 }
 
-class _EmptyParcelsState extends StatelessWidget {
+class _EmptyParcelsState extends ConsumerWidget {
   const _EmptyParcelsState({required this.hasQuery});
 
   final bool hasQuery;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     return AppEmptyState(
       icon: Icons.inventory_2_outlined,
-      title: hasQuery ? 'No matching parcels' : 'No parcels found',
+      title: hasQuery ? strings.noMatchingParcels : strings.noParcelsFound,
       message: hasQuery
           ? 'Try another tracking ID, receiver, phone, sender, or town.'
-          : 'Sync with Firebase to load parcels from group mobile.',
+          : strings.syncParcelsMessage,
     );
   }
 }

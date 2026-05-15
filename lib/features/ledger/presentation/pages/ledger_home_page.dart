@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/utils/sync_error_message.dart';
 import '../../../../shared/widgets/app_drawer.dart';
@@ -26,17 +27,18 @@ class _LedgerHomePageState extends ConsumerState<LedgerHomePage> {
   Widget build(BuildContext context) {
     final drivers = ref.watch(localDriversProvider);
     final ledgers = ref.watch(localLedgerMainsProvider);
+    final strings = ref.watch(appStringsProvider);
 
     return Scaffold(
       drawer: const AppDrawer(selectedDestination: AppDrawerDestination.ledger),
       appBar: AppBar(
-        title: const Text('Main Ledger'),
+        title: Text(strings.ledgerTitle),
         centerTitle: false,
         actions: [
           SyncActionButton(
             isSyncing: _isSyncing,
             onPressed: _syncLedgers,
-            tooltip: 'Sync ledger mains',
+            tooltip: strings.syncLedgerTooltip,
           ),
         ],
       ),
@@ -51,7 +53,7 @@ class _LedgerHomePageState extends ConsumerState<LedgerHomePage> {
             ? null
             : () => _showCreateLedgerDialog(context, ref, drivers),
         icon: const Icon(Icons.add),
-        label: const Text('Create Ledger Main'),
+        label: Text(strings.createLedger),
       ),
     );
   }
@@ -60,12 +62,11 @@ class _LedgerHomePageState extends ConsumerState<LedgerHomePage> {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     final messenger = ScaffoldMessenger.of(context);
+    final strings = ref.read(appStringsProvider);
     try {
       await ref.read(localLedgerMainsProvider.notifier).syncWithFirebase();
       if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Ledger mains synced.')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(strings.ledgerSynced)));
     } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(syncErrorMessage(error))));
@@ -85,15 +86,16 @@ class _LedgerPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: ledgers.isEmpty
-              ? const AppEmptyState(
+              ? AppEmptyState(
                   icon: Icons.receipt_long_outlined,
-                  title: 'No ledger mains yet',
-                  message: 'Select a driver and create the first ledger main.',
+                  title: strings.noLedgersTitle,
+                  message: strings.noLedgersMessage,
                 )
               : ListView.builder(
                   itemCount: ledgers.length,
@@ -117,14 +119,15 @@ class _LedgerPanel extends ConsumerWidget {
   }
 }
 
-class _LedgerTile extends StatelessWidget {
+class _LedgerTile extends ConsumerWidget {
   const _LedgerTile({required this.ledger, required this.driver});
 
   final LedgerMain ledger;
   final Driver? driver;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final resolvedDriver =
         driver ??
         Driver(
@@ -159,9 +162,11 @@ class _LedgerTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text('Dispatch date: ${formatDate(ledger.dispatchDate)}'),
+        subtitle: Text(
+          '${strings.dispatchDate}: ${formatDate(ledger.dispatchDate)}',
+        ),
         trailing: Text(
-          ledger.status.value,
+          strings.statusValue(ledger.status.value),
           style: Theme.of(context).textTheme.labelLarge,
         ),
       ),
@@ -176,6 +181,7 @@ Future<void> _showCreateLedgerDialog(
 ) async {
   var selectedDriverId = drivers.first.id;
   var dispatchDate = DateTime.now();
+  final strings = ref.read(appStringsProvider);
 
   await showDialog<void>(
     context: context,
@@ -183,7 +189,7 @@ Future<void> _showCreateLedgerDialog(
       return StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Create Ledger Main'),
+            title: Text(strings.createLedger),
             content: SizedBox(
               width: 420,
               child: Column(
@@ -192,7 +198,7 @@ Future<void> _showCreateLedgerDialog(
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: selectedDriverId,
-                    decoration: const InputDecoration(labelText: 'Driver'),
+                    decoration: InputDecoration(labelText: strings.driver),
                     items: [
                       for (final driver in drivers)
                         DropdownMenuItem(
@@ -226,7 +232,7 @@ Future<void> _showCreateLedgerDialog(
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(strings.cancel),
               ),
               FilledButton(
                 onPressed: () async {
@@ -241,7 +247,7 @@ Future<void> _showCreateLedgerDialog(
                     Navigator.pop(context);
                   }
                 },
-                child: const Text('Create'),
+                child: Text(strings.createLedgerShort),
               ),
             ],
           );

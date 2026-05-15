@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../core/utils/money_formatter.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../domain/ledger_main.dart';
@@ -69,6 +70,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.ledger.status == LedgerStatus.settled;
+    final strings = ref.watch(appStringsProvider);
     final commissionFee = _readFee(_commissionController);
     final laborFee = _readFee(_laborController);
     final deliveryFee = _readFee(_deliveryController);
@@ -80,7 +82,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Settlement' : 'Settle Ledger'),
+        title: Text(isEditing ? strings.editSettlement : strings.settleLedger),
         centerTitle: false,
         actions: [
           Padding(
@@ -93,7 +95,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.done_all_outlined),
-              label: Text(isEditing ? 'Save Changes' : 'Settle'),
+              label: Text(isEditing ? strings.saveChanges : strings.settle),
             ),
           ),
         ],
@@ -118,6 +120,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
                 totalDeductions: totalDeductions,
                 netAmount: netAmount,
                 driverBalance: driverBalance,
+                strings: strings,
               );
               final form = _buildForm();
 
@@ -145,6 +148,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
 
   Widget _buildForm() {
     final isEditing = widget.ledger.status == LedgerStatus.settled;
+    final strings = ref.watch(appStringsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,19 +159,22 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
           children: [
             SizedBox(
               width: 294,
-              child: _feeField('Commission fee', _commissionController),
+              child: _feeField(
+                strings.commissionFeeInput,
+                _commissionController,
+              ),
             ),
             SizedBox(
               width: 294,
-              child: _feeField('Labor fee', _laborController),
+              child: _feeField(strings.laborFeeInput, _laborController),
             ),
             SizedBox(
               width: 294,
-              child: _feeField('Delivery fee', _deliveryController),
+              child: _feeField(strings.deliveryFeeInput, _deliveryController),
             ),
             SizedBox(
               width: 294,
-              child: _feeField('Other fee', _otherController),
+              child: _feeField(strings.otherFeeInput, _otherController),
             ),
           ],
         ),
@@ -176,7 +183,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
           constraints: const BoxConstraints(maxWidth: 600),
           child: AppTextField(
             controller: _noteController,
-            labelText: 'Note',
+            labelText: strings.note,
             enabled: !_isSubmitting,
             textInputAction: TextInputAction.done,
             prefixIcon: const Icon(Icons.notes_outlined),
@@ -189,7 +196,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
           children: [
             TextButton(
               onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(strings.cancel),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
@@ -200,7 +207,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.done_all_outlined),
-              label: Text(isEditing ? 'Save Changes' : 'Settle'),
+              label: Text(isEditing ? strings.saveChanges : strings.settle),
             ),
           ],
         ),
@@ -236,6 +243,7 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
     final isEditing = widget.ledger.status == LedgerStatus.settled;
     setState(() => _isSubmitting = true);
     final messenger = ScaffoldMessenger.of(context);
+    final strings = ref.read(appStringsProvider);
     final totalDeductions = _totalDeductions();
     final netAmount = widget.totalCharges - totalDeductions;
 
@@ -299,7 +307,9 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
     Navigator.pop(context);
     messenger.showSnackBar(
       SnackBar(
-        content: Text(isEditing ? 'Settlement updated.' : 'Ledger settled.'),
+        content: Text(
+          isEditing ? strings.settlementUpdated : strings.ledgerSettled,
+        ),
       ),
     );
   }
@@ -319,6 +329,7 @@ class _SettleSummaryPanel extends StatelessWidget {
     required this.totalDeductions,
     required this.netAmount,
     required this.driverBalance,
+    required this.strings,
   });
 
   final int parcelCount;
@@ -333,6 +344,7 @@ class _SettleSummaryPanel extends StatelessWidget {
   final double totalDeductions;
   final double netAmount;
   final double driverBalance;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -348,56 +360,56 @@ class _SettleSummaryPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Summary',
+              strings.summary,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
-            _SummaryLine(label: 'Parcels', value: parcelCount.toString()),
+            _SummaryLine(label: strings.parcels, value: parcelCount.toString()),
             _SummaryLine(
-              label: 'Paid Amount',
+              label: strings.paidAmount,
               value: '${_formatAmount(paidAmount)} Ks',
             ),
             _SummaryLine(
-              label: 'Unpaid Amount',
+              label: strings.unpaidAmount,
               value: '${_formatAmount(collectAmount)} Ks',
             ),
             _SummaryLine(
-              label: 'Total Charges',
+              label: strings.totalCharges,
               value: '${_formatAmount(totalCharges)} Ks',
             ),
             _SummaryLine(
-              label: 'Cash Advance',
+              label: strings.cashAdvance,
               value: '${_formatAmount(totalCashAdvance)} Ks',
             ),
             _SummaryLine(
-              label: 'Commission Fee',
+              label: strings.commissionFee,
               value: '- ${_formatAmount(commissionFee)} Ks',
             ),
             _SummaryLine(
-              label: 'Labor Fee',
+              label: strings.laborFee,
               value: '- ${_formatAmount(laborFee)} Ks',
             ),
             _SummaryLine(
-              label: 'Delivery Fee',
+              label: strings.deliveryFee,
               value: '- ${_formatAmount(deliveryFee)} Ks',
             ),
             _SummaryLine(
-              label: 'Other Fee',
+              label: strings.otherFee,
               value: '- ${_formatAmount(otherFee)} Ks',
             ),
             _SummaryLine(
-              label: 'Total Fees',
+              label: strings.totalFees,
               value: '${_formatAmount(totalDeductions)} Ks',
             ),
             const Divider(height: 18),
             _SummaryLine(
-              label: 'Net Amount',
+              label: strings.netAmount,
               value: '${_formatAmount(netAmount)} Ks',
             ),
             _SummaryLine(
-              label: 'Pay / Receive Amount',
+              label: strings.payReceiveAmount,
               value: _formatSignedAmount(driverBalance),
               isStrong: true,
             ),

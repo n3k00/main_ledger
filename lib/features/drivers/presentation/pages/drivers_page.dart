@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_language.dart';
 import '../../../../shared/utils/sync_error_message.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -24,19 +25,20 @@ class _DriversPageState extends ConsumerState<DriversPage> {
   @override
   Widget build(BuildContext context) {
     final drivers = ref.watch(localDriversProvider);
+    final strings = ref.watch(appStringsProvider);
 
     return Scaffold(
       drawer: const AppDrawer(
         selectedDestination: AppDrawerDestination.drivers,
       ),
       appBar: AppBar(
-        title: const Text('Drivers'),
+        title: Text(strings.drivers),
         centerTitle: false,
         actions: [
           SyncActionButton(
             isSyncing: _isSyncing,
             onPressed: _syncDrivers,
-            tooltip: 'Sync drivers',
+            tooltip: strings.syncDriversTooltip,
           ),
         ],
       ),
@@ -68,7 +70,7 @@ class _DriversPageState extends ConsumerState<DriversPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showDriverDialog(context, ref),
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Create Driver'),
+        label: Text(strings.createDriver),
       ),
     );
   }
@@ -77,10 +79,11 @@ class _DriversPageState extends ConsumerState<DriversPage> {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     final messenger = ScaffoldMessenger.of(context);
+    final strings = ref.read(appStringsProvider);
     try {
       await ref.read(localDriversProvider.notifier).syncWithFirebase();
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Drivers synced.')));
+      messenger.showSnackBar(SnackBar(content: Text(strings.driversSynced)));
     } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(syncErrorMessage(error))));
@@ -92,14 +95,15 @@ class _DriversPageState extends ConsumerState<DriversPage> {
   }
 }
 
-class _DriverTile extends StatelessWidget {
+class _DriverTile extends ConsumerWidget {
   const _DriverTile({required this.driver, required this.onEdit});
 
   final Driver driver;
   final VoidCallback onEdit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final subtitle = [
       if (driver.phone != null) driver.phone,
       if (driver.vehicleNumber != null) driver.vehicleNumber,
@@ -125,7 +129,7 @@ class _DriverTile extends StatelessWidget {
             : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: IconButton(
           onPressed: onEdit,
-          tooltip: 'Edit driver',
+          tooltip: strings.editDriverTooltip,
           icon: const Icon(Icons.edit_outlined),
         ),
       ),
@@ -133,15 +137,16 @@ class _DriverTile extends StatelessWidget {
   }
 }
 
-class _EmptyDriverState extends StatelessWidget {
+class _EmptyDriverState extends ConsumerWidget {
   const _EmptyDriverState();
 
   @override
-  Widget build(BuildContext context) {
-    return const AppEmptyState(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
+    return AppEmptyState(
       icon: Icons.person_outline,
-      title: 'No drivers yet',
-      message: 'Create drivers here before creating ledger mains.',
+      title: strings.noDriversTitle,
+      message: strings.noDriversMessage,
     );
   }
 }
@@ -157,6 +162,7 @@ Future<void> _showDriverDialog(
     text: driver?.vehicleNumber ?? '',
   );
   final isEditing = driver != null;
+  final strings = ref.read(appStringsProvider);
 
   await showModalBottomSheet<void>(
     context: context,
@@ -219,7 +225,7 @@ Future<void> _showDriverDialog(
                     children: [
                       Expanded(
                         child: Text(
-                          isEditing ? 'Edit Driver' : 'Create Driver',
+                          isEditing ? strings.editDriver : strings.createDriver,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(sheetContext).textTheme.titleMedium
@@ -228,7 +234,7 @@ Future<void> _showDriverDialog(
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(sheetContext),
-                        tooltip: 'Close',
+                        tooltip: strings.close,
                         icon: const Icon(Icons.close),
                       ),
                     ],
@@ -236,7 +242,7 @@ Future<void> _showDriverDialog(
                   const SizedBox(height: 8),
                   AppTextField(
                     controller: nameController,
-                    labelText: 'Driver name',
+                    labelText: strings.driverName,
                     prefixIcon: const Icon(Icons.person_outline),
                     autofocus: true,
                     textInputAction: TextInputAction.next,
@@ -245,7 +251,7 @@ Future<void> _showDriverDialog(
                   const SizedBox(height: 12),
                   AppTextField(
                     controller: phoneController,
-                    labelText: 'Phone',
+                    labelText: strings.phone,
                     prefixIcon: const Icon(Icons.phone_outlined),
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.phone,
@@ -254,7 +260,7 @@ Future<void> _showDriverDialog(
                   const SizedBox(height: 12),
                   AppTextField(
                     controller: vehicleController,
-                    labelText: 'Vehicle number',
+                    labelText: strings.vehicleNumber,
                     prefixIcon: const Icon(Icons.local_shipping_outlined),
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => unawaited(saveDriver()),
@@ -266,12 +272,12 @@ Future<void> _showDriverDialog(
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(sheetContext),
-                        child: const Text('Cancel'),
+                        child: Text(strings.cancel),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
                         onPressed: () => unawaited(saveDriver()),
-                        child: Text(isEditing ? 'Save' : 'Create'),
+                        child: Text(isEditing ? strings.save : strings.create),
                       ),
                     ],
                   ),
