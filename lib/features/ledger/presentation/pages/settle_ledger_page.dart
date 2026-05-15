@@ -273,6 +273,16 @@ class _SettleLedgerPageState extends ConsumerState<SettleLedgerPage> {
       );
       return;
     }
+    if (settleError is LedgerSettleLimitException) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Too many vouchers to settle at once. ${settleError.count} attached, maximum is ${settleError.max}.',
+          ),
+        ),
+      );
+      return;
+    }
     if (settleError != null) {
       messenger.showSnackBar(
         SnackBar(content: Text('Settle failed: $settleError')),

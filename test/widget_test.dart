@@ -620,6 +620,66 @@ void main() {
     expect(harness.parcelRemote.updatedLedgerIds, isEmpty);
   });
 
+  test(
+    'blocks settle when attached voucher count exceeds guard limit',
+    () async {
+      final harness = TestAppHarness();
+      addTearDown(harness.close);
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(harness.database),
+          authStateChangesProvider.overrideWithValue(
+            const AsyncData(_testUser),
+          ),
+          driverSyncServiceProvider.overrideWithValue(_NoopDriverSyncService()),
+          ledgerSyncServiceProvider.overrideWithValue(
+            _NoopLedgerSyncService(harness.parcelRemote),
+          ),
+          parcelRemoteDataSourceProvider.overrideWithValue(
+            harness.parcelRemote,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final driverId = await seedDriver(harness.database, 'Ko Aung');
+      final ledgerId = await seedLedger(harness.database, driverId);
+      for (var index = 0; index <= maxSettlementVoucherCount; index++) {
+        await seedParcel(
+          database: harness.database,
+          ledgerId: ledgerId,
+          trackingId: 'YGN${index.toString().padLeft(4, '0')}',
+        );
+      }
+
+      await expectLater(
+        container
+            .read(localLedgerMainsProvider.notifier)
+            .settleLedger(
+              ledgerId: ledgerId,
+              commissionFee: 0,
+              laborFee: 0,
+              deliveryFee: 0,
+              otherFee: 0,
+              note: null,
+              settledTotalCharges: 0,
+              settledTotalCashAdvance: 0,
+              settledNetAmount: 0,
+              settledParcelCount: 0,
+            ),
+        throwsA(
+          isA<LedgerSettleLimitException>()
+              .having((error) => error.count, 'count', 451)
+              .having((error) => error.max, 'max', maxSettlementVoucherCount),
+        ),
+      );
+
+      final ledger = (await harness.database.ledgerMainsDao.getAllLedgerMains())
+          .singleWhere((item) => item.id == ledgerId);
+      expect(ledger.status, 'draft');
+    },
+  );
+
   testWidgets('edits an existing settlement without changing settled date', (
     WidgetTester tester,
   ) async {

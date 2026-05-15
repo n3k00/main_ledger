@@ -14,6 +14,8 @@ import '../../domain/parcel_entry.dart';
 import '../../../parcels/domain/parcel.dart';
 import '../../../parcels/presentation/providers/parcel_providers.dart';
 
+const maxSettlementVoucherCount = 450;
+
 final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
   return LedgerRepository(ref.watch(appDatabaseProvider));
 });
@@ -130,6 +132,13 @@ class LocalLedgerMainsNotifier extends Notifier<List<LedgerMain>> {
         : await ref
               .read(parcelRepositoryProvider)
               .getParcelsByLedgerId(ledgerId);
+    if (!isEditingSettlement &&
+        attachedParcels.length > maxSettlementVoucherCount) {
+      throw LedgerSettleLimitException(
+        count: attachedParcels.length,
+        max: maxSettlementVoucherCount,
+      );
+    }
     final remoteParcels = ref.read(parcelRemoteDataSourceProvider);
     if (!isEditingSettlement) {
       for (final parcel in attachedParcels) {
@@ -197,6 +206,18 @@ class LedgerSettleConflictException implements Exception {
   @override
   String toString() {
     return '$trackingId is already attached to another ledger in Firebase.';
+  }
+}
+
+class LedgerSettleLimitException implements Exception {
+  const LedgerSettleLimitException({required this.count, required this.max});
+
+  final int count;
+  final int max;
+
+  @override
+  String toString() {
+    return 'Too many vouchers to settle at once. $count attached, maximum is $max.';
   }
 }
 
