@@ -191,16 +191,80 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        await migrator.createTable(parcels);
-      }
+      await migrateDatabase(migrator, from, to);
     },
   );
+
+  Future<void> migrateDatabase(Migrator migrator, int from, int to) async {
+    if (from < 2) {
+      await _createTableIfMissing(migrator, parcels.actualTableName, parcels);
+    }
+
+    if (from < 3) {
+      await _addColumnIfMissing(
+        migrator,
+        ledgerMains.actualTableName,
+        'settled_total_charges',
+        ledgerMains.settledTotalCharges,
+      );
+      await _addColumnIfMissing(
+        migrator,
+        ledgerMains.actualTableName,
+        'settled_total_cash_advance',
+        ledgerMains.settledTotalCashAdvance,
+      );
+      await _addColumnIfMissing(
+        migrator,
+        ledgerMains.actualTableName,
+        'settled_net_amount',
+        ledgerMains.settledNetAmount,
+      );
+      await _addColumnIfMissing(
+        migrator,
+        ledgerMains.actualTableName,
+        'settled_parcel_count',
+        ledgerMains.settledParcelCount,
+      );
+      await _addColumnIfMissing(
+        migrator,
+        ledgerMains.actualTableName,
+        'settled_at',
+        ledgerMains.settledAt,
+      );
+    }
+  }
+
+  Future<void> _createTableIfMissing(
+    Migrator migrator,
+    String tableName,
+    TableInfo<Table, Object?> table,
+  ) async {
+    final exists = await customSelect(
+      'SELECT 1 FROM sqlite_master WHERE type = ? AND name = ? LIMIT 1',
+      variables: [const Variable('table'), Variable(tableName)],
+    ).getSingleOrNull();
+    if (exists == null) {
+      await migrator.createTable(table);
+    }
+  }
+
+  Future<void> _addColumnIfMissing(
+    Migrator migrator,
+    String tableName,
+    String columnName,
+    GeneratedColumn<Object> column,
+  ) async {
+    final columns = await customSelect('PRAGMA table_info($tableName)').get();
+    final hasColumn = columns.any((row) => row.data['name'] == columnName);
+    if (!hasColumn) {
+      await migrator.addColumn(ledgerMains, column);
+    }
+  }
 }
 
 LazyDatabase _openConnection() {
