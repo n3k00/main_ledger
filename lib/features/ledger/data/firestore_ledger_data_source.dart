@@ -28,7 +28,12 @@ class FirestoreLedgerDataSource implements LedgerRemoteDataSource {
     final snapshot = await _ledgerMains
         .orderBy('dispatchDate', descending: true)
         .get();
-    return snapshot.docs.map(_fromDocument).toList();
+    return snapshot.docs
+        .map(
+          (document) => ledgerFromFirestoreData(document.data(), document.id),
+        )
+        .whereType<LedgerMain>()
+        .toList();
   }
 
   @override
@@ -77,45 +82,78 @@ class FirestoreLedgerDataSource implements LedgerRemoteDataSource {
       'updatedAt': Timestamp.fromDate(ledger.updatedAt),
     };
   }
+}
 
-  LedgerMain _fromDocument(DocumentSnapshot<Map<String, dynamic>> snapshot) {
-    final data = snapshot.data()!;
+LedgerMain? ledgerFromFirestoreData(
+  Map<String, dynamic> data,
+  String documentId,
+) {
+  final now = DateTime.now();
 
-    DateTime readTimestamp(String key) {
-      final value = data[key];
-      if (value is Timestamp) return value.toDate();
-      if (value is DateTime) return value;
-      if (value is String) return DateTime.parse(value);
-      throw FormatException('Invalid ledger timestamp for $key.');
-    }
-
-    DateTime? readNullableTimestamp(String key) {
-      final value = data[key];
-      if (value == null) return null;
-      if (value is Timestamp) return value.toDate();
-      if (value is DateTime) return value;
-      if (value is String) return DateTime.parse(value);
-      throw FormatException('Invalid ledger timestamp for $key.');
-    }
-
-    return LedgerMain(
-      id: (data['id'] as String?) ?? snapshot.id,
-      driverId: data['driverId'] as String,
-      dispatchDate: readTimestamp('dispatchDate'),
-      commissionFee: (data['commissionFee'] as num?)?.toDouble(),
-      laborFee: (data['laborFee'] as num?)?.toDouble(),
-      deliveryFee: (data['deliveryFee'] as num?)?.toDouble(),
-      otherFee: (data['otherFee'] as num?)?.toDouble(),
-      note: data['note'] as String?,
-      status: LedgerStatus.fromValue((data['status'] as String?) ?? 'draft'),
-      settledTotalCharges: (data['settledTotalCharges'] as num?)?.toDouble(),
-      settledTotalCashAdvance: (data['settledTotalCashAdvance'] as num?)
-          ?.toDouble(),
-      settledNetAmount: (data['settledNetAmount'] as num?)?.toDouble(),
-      settledParcelCount: (data['settledParcelCount'] as num?)?.toInt(),
-      settledAt: readNullableTimestamp('settledAt'),
-      createdAt: readTimestamp('createdAt'),
-      updatedAt: readTimestamp('updatedAt'),
-    );
+  String readString(String key, {String fallback = ''}) {
+    final value = data[key];
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
   }
+
+  String? readNullableString(String key) {
+    final text = readString(key);
+    return text.isEmpty ? null : text;
+  }
+
+  double? readNullableDouble(String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
+  }
+
+  int? readNullableInt(String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  DateTime? readNullableTimestamp(String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
+  final driverId = readString('driverId');
+  if (driverId.isEmpty) return null;
+
+  final createdAt =
+      readNullableTimestamp('createdAt') ??
+      readNullableTimestamp('dispatchDate') ??
+      readNullableTimestamp('updatedAt') ??
+      now;
+  final updatedAt = readNullableTimestamp('updatedAt') ?? createdAt;
+  final dispatchDate = readNullableTimestamp('dispatchDate') ?? createdAt;
+
+  return LedgerMain(
+    id: readString('id', fallback: documentId),
+    driverId: driverId,
+    dispatchDate: dispatchDate,
+    commissionFee: readNullableDouble('commissionFee'),
+    laborFee: readNullableDouble('laborFee'),
+    deliveryFee: readNullableDouble('deliveryFee'),
+    otherFee: readNullableDouble('otherFee'),
+    note: readNullableString('note'),
+    status: LedgerStatus.fromValue(readString('status', fallback: 'draft')),
+    settledTotalCharges: readNullableDouble('settledTotalCharges'),
+    settledTotalCashAdvance: readNullableDouble('settledTotalCashAdvance'),
+    settledNetAmount: readNullableDouble('settledNetAmount'),
+    settledParcelCount: readNullableInt('settledParcelCount'),
+    settledAt: readNullableTimestamp('settledAt'),
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 }
